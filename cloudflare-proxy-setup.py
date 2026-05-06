@@ -14,6 +14,7 @@ from pathlib import Path
 
 API_BASE = "https://api.cloudflare.com/client/v4"
 ENV_FILE = Path("/tmp/huggingmes-cloudflare-proxy.env")
+ENV_FILE = Path("/tmp/huggingmes-cloudflare-proxy.env")
 DEFAULT_ALLOWED = [
     "api.telegram.org",
     "discord.com",
@@ -85,20 +86,10 @@ async function handleRequest(request) {{
   const queryTarget = url.searchParams.get("proxy_target");
   const targetHost = request.headers.get("x-target-host") || queryTarget;
 
-  let pathname = url.pathname;
-  let pathSecret = "";
-  if (PROXY_SHARED_SECRET && pathname.startsWith("/")) {{
-    const nextSlash = pathname.indexOf("/", 1);
-    const candidate = nextSlash > 0 ? pathname.slice(1, nextSlash) : pathname.slice(1);
-    if (candidate === PROXY_SHARED_SECRET) {{
-      pathSecret = candidate;
-      pathname = pathname.slice(candidate.length + 1) || "/";
-    }}
-  }}
-
   if (PROXY_SHARED_SECRET) {{
-    const providedSecret = pathSecret || request.headers.get("x-proxy-key") || url.searchParams.get("proxy_key") || "";
-    if (providedSecret !== PROXY_SHARED_SECRET) {{
+    const providedSecret = request.headers.get("x-proxy-key") || url.searchParams.get("proxy_key") || "";
+    const telegramStylePath = url.pathname.startsWith("/bot") || url.pathname.startsWith("/file/bot");
+    if (providedSecret !== PROXY_SHARED_SECRET && !(telegramStylePath && !targetHost)) {{
       return new Response("Unauthorized: Invalid proxy key", {{ status: 401 }});
     }}
   }}
@@ -109,7 +100,7 @@ async function handleRequest(request) {{
       return new Response(`Forbidden: Host ${{targetHost}} is not allowed.`, {{ status: 403 }});
     }}
     targetBase = `https://${{targetHost}}`;
-  }} else if (pathname.startsWith("/bot") || pathname.startsWith("/file/bot")) {{
+  }} else if (url.pathname.startsWith("/bot") || url.pathname.startsWith("/file/bot")) {{
     targetBase = "https://api.telegram.org";
   }} else {{
     return new Response("Invalid request: No target host provided.", {{ status: 400 }});
@@ -119,7 +110,7 @@ async function handleRequest(request) {{
   cleanSearch.delete("proxy_target");
   cleanSearch.delete("proxy_key");
   const searchStr = cleanSearch.toString();
-  const targetUrl = targetBase + pathname + (searchStr ? `?${{searchStr}}` : "");
+  const targetUrl = targetBase + url.pathname + (searchStr ? `?${{searchStr}}` : "");
 
   const headers = new Headers(request.headers);
   for (const header of ["cf-connecting-ip", "cf-ray", "cf-visitor", "host", "x-real-ip", "x-target-host", "x-proxy-key"]) {{

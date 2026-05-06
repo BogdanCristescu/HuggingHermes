@@ -35,13 +35,13 @@ if [ -z "${API_SERVER_KEY:-}" ]; then
   if [ -n "${GATEWAY_TOKEN:-}" ]; then
     export API_SERVER_KEY="$GATEWAY_TOKEN"
   else
-    echo "ERROR: GATEWAY_TOKEN is not set." >&2
-    echo "" >&2
-    echo "Set GATEWAY_TOKEN in your Space secrets to a strong random value." >&2
-    echo "Generate one with: openssl rand -hex 32" >&2
-    echo "" >&2
-    echo "Without GATEWAY_TOKEN the dashboard cannot be logged into." >&2
-    exit 1
+    API_SERVER_KEY="$(python3 - <<'PY'
+import secrets
+print(secrets.token_urlsafe(32))
+PY
+)"
+    export API_SERVER_KEY
+    echo "GATEWAY_TOKEN not set - generated an ephemeral API token for this boot."
   fi
 fi
 
@@ -207,13 +207,8 @@ export TELEGRAM_BASE_FILE_URL="${TELEGRAM_BASE_FILE_URL:-}"
 
 if [ -n "${CLOUDFLARE_PROXY_URL:-}" ] && [ -z "$TELEGRAM_BASE_URL" ]; then
   CLOUDFLARE_PROXY_URL="${CLOUDFLARE_PROXY_URL%/}"
-  if [ -n "${CLOUDFLARE_PROXY_SECRET:-}" ]; then
-    export TELEGRAM_BASE_URL="${CLOUDFLARE_PROXY_URL}/${CLOUDFLARE_PROXY_SECRET}/bot"
-    export TELEGRAM_BASE_FILE_URL="${CLOUDFLARE_PROXY_URL}/${CLOUDFLARE_PROXY_SECRET}/file/bot"
-  else
-    export TELEGRAM_BASE_URL="${CLOUDFLARE_PROXY_URL}/bot"
-    export TELEGRAM_BASE_FILE_URL="${CLOUDFLARE_PROXY_URL}/file/bot"
-  fi
+  export TELEGRAM_BASE_URL="${CLOUDFLARE_PROXY_URL}/bot"
+  export TELEGRAM_BASE_FILE_URL="${CLOUDFLARE_PROXY_URL}/file/bot"
 fi
 
 # ── Build config ──
@@ -328,15 +323,15 @@ PY
 fi
 
 echo "Launching Hermes dashboard on 127.0.0.1:${DASHBOARD_PORT}..."
-hermes dashboard --host 127.0.0.1 --insecure > >(tee -a "$HERMES_HOME/logs/dashboard.log") 2>&1 &
+(hermes dashboard --host 127.0.0.1 --insecure 2>&1 | tee -a "$HERMES_HOME/logs/dashboard.log") &
 DASHBOARD_PID=$!
 
 # ── Launch gateway ──
 echo "Launching Hermes gateway..."
-hermes gateway run > >(tee -a "$HERMES_HOME/logs/gateway.log") 2>&1 &
+(hermes gateway run 2>&1 | tee -a "$HERMES_HOME/logs/gateway.log") &
 GATEWAY_PID=$!
 
-GATEWAY_READY_TIMEOUT="${GATEWAY_READY_TIMEOUT:-300}"
+GATEWAY_READY_TIMEOUT="${GATEWAY_READY_TIMEOUT:-120}"
 ready=false
 for ((i=0; i<GATEWAY_READY_TIMEOUT; i++)); do
   if (echo > "/dev/tcp/127.0.0.1/${GATEWAY_API_PORT}") 2>/dev/null; then
