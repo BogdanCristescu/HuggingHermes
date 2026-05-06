@@ -336,7 +336,7 @@ echo "Launching Hermes gateway..."
 hermes gateway run > >(tee -a "$HERMES_HOME/logs/gateway.log") 2>&1 &
 GATEWAY_PID=$!
 
-GATEWAY_READY_TIMEOUT="${GATEWAY_READY_TIMEOUT:-120}"
+GATEWAY_READY_TIMEOUT="${GATEWAY_READY_TIMEOUT:-300}"
 ready=false
 for ((i=0; i<GATEWAY_READY_TIMEOUT; i++)); do
   if (echo > "/dev/tcp/127.0.0.1/${GATEWAY_API_PORT}") 2>/dev/null; then
