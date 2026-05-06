@@ -328,12 +328,12 @@ PY
 fi
 
 echo "Launching Hermes dashboard on 127.0.0.1:${DASHBOARD_PORT}..."
-(hermes dashboard --host 127.0.0.1 --insecure 2>&1 | tee -a "$HERMES_HOME/logs/dashboard.log") &
+hermes dashboard --host 127.0.0.1 --insecure > >(tee -a "$HERMES_HOME/logs/dashboard.log") 2>&1 &
 DASHBOARD_PID=$!
 
 # ── Launch gateway ──
 echo "Launching Hermes gateway..."
-(hermes gateway run 2>&1 | tee -a "$HERMES_HOME/logs/gateway.log") &
+hermes gateway run > >(tee -a "$HERMES_HOME/logs/gateway.log") 2>&1 &
 GATEWAY_PID=$!
 
 GATEWAY_READY_TIMEOUT="${GATEWAY_READY_TIMEOUT:-120}"
