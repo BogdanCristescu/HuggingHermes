@@ -35,13 +35,13 @@ if [ -z "${API_SERVER_KEY:-}" ]; then
   if [ -n "${GATEWAY_TOKEN:-}" ]; then
     export API_SERVER_KEY="$GATEWAY_TOKEN"
   else
-    API_SERVER_KEY="$(python3 - <<'PY'
-import secrets
-print(secrets.token_urlsafe(32))
-PY
-)"
-    export API_SERVER_KEY
-    echo "GATEWAY_TOKEN not set - generated an ephemeral API token for this boot."
+    echo "ERROR: GATEWAY_TOKEN is not set." >&2
+    echo "" >&2
+    echo "Set GATEWAY_TOKEN in your Space secrets to a strong random value." >&2
+    echo "Generate one with: openssl rand -hex 32" >&2
+    echo "" >&2
+    echo "Without GATEWAY_TOKEN the dashboard cannot be logged into." >&2
+    exit 1
   fi
 fi
 
