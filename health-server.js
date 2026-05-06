@@ -570,6 +570,23 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (path === "/status" || path === `${APP_BASE}/status`) {
+    if (!isAuthorized(req)) {
+      if (wantsHtml(req)) {
+        redirect(res, loginUrl(`${path}${parsed.search}`));
+        return;
+      }
+      res.writeHead(401, {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+      });
+      res.end(
+        JSON.stringify({
+          error: "unauthorized",
+          message: "Use Authorization: Bearer <GATEWAY_TOKEN>.",
+        }),
+      );
+      return;
+    }
     const data = await statusPayload();
     res.writeHead(200, { "content-type": "application/json" });
     res.end(JSON.stringify(data, null, 2));
@@ -577,6 +594,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (path === "/") {
+    if (!requireAuth(req, res)) return;
     const data = await statusPayload();
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end(renderDashboard(data));
