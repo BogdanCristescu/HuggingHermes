@@ -81,8 +81,10 @@ function isHttpsRequest(req) {
 }
 
 function buildSessionCookie(req) {
-  const secure = isHttpsRequest(req) ? "; Secure" : "";
-  return `${SESSION_COOKIE}=${encodeURIComponent(expectedSessionValue())}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400${secure}`;
+  const https = isHttpsRequest(req);
+  const sameSite = https ? "None" : "Lax";
+  const secure = https ? "; Secure" : "";
+  return `${SESSION_COOKIE}=${encodeURIComponent(expectedSessionValue())}; Path=/; HttpOnly; SameSite=${sameSite}; Max-Age=86400${secure}`;
 }
 
 function getBearerToken(req) {
