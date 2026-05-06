@@ -87,34 +87,19 @@ async function handleRequest(request) {{
 
   let pathname = url.pathname;
   let pathSecret = "";
-  let pathSecretMatched = false;
   if (PROXY_SHARED_SECRET && pathname.startsWith("/")) {{
     const nextSlash = pathname.indexOf("/", 1);
     const candidate = nextSlash > 0 ? pathname.slice(1, nextSlash) : pathname.slice(1);
     if (candidate === PROXY_SHARED_SECRET) {{
       pathSecret = candidate;
-      pathSecretMatched = true;
       pathname = pathname.slice(candidate.length + 1) || "/";
     }}
   }}
 
   if (PROXY_SHARED_SECRET) {{
-    const headerSecret = request.headers.get("x-proxy-key");
-    const querySecret = url.searchParams.get("proxy_key");
-    const providedSecret = pathSecret || headerSecret || querySecret || "";
+    const providedSecret = pathSecret || request.headers.get("x-proxy-key") || url.searchParams.get("proxy_key") || "";
     if (providedSecret !== PROXY_SHARED_SECRET) {{
-      const firstSeg = url.pathname.split("/")[1] || "";
-      const diag = {{
-        why: "secret check failed",
-        pathFirstSegLen: firstSeg.length,
-        expectedSecretLen: PROXY_SHARED_SECRET.length,
-        pathSecretMatched,
-        gotHeader: !!headerSecret,
-        gotQuery: !!querySecret,
-        firstSegStartsWith: firstSeg.slice(0, 3),
-        expectedStartsWith: PROXY_SHARED_SECRET.slice(0, 3)
-      }};
-      return new Response(JSON.stringify(diag), {{ status: 401, headers: {{ "content-type": "application/json" }} }});
+      return new Response("Unauthorized: Invalid proxy key", {{ status: 401 }});
     }}
   }}
 
