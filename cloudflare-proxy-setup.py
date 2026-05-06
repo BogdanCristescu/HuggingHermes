@@ -14,7 +14,6 @@ from pathlib import Path
 
 API_BASE = "https://api.cloudflare.com/client/v4"
 ENV_FILE = Path("/tmp/huggingmes-cloudflare-proxy.env")
-ENV_FILE = Path("/tmp/huggingmes-cloudflare-proxy.env")
 DEFAULT_ALLOWED = [
     "api.telegram.org",
     "discord.com",
